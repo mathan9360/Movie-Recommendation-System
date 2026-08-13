@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineMind AI — Next-Gen Movie Recommendation System</title>
+  <meta name="description" content="AI-powered movie recommendation engine using TF-IDF and Cosine Similarity to find your perfect cinema match." />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar frosted">
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <div class="brand-text">
+          <span class="logo-title">CineMind<span class="accent-text">AI</span></span>
+          <span class="logo-subtitle">ML Recommendation Engine</span>
+        </div>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="globalSearchInput" placeholder="Search movies, directors, actors, or genres..." autocomplete="off" />
+        <button id="clearSearchBtn" class="clear-btn hidden"><i class="fa-solid fa-xmark"></i></button>
+        <div id="searchSuggestions" class="suggestions-dropdown hidden"></div>
+      </div>
+
+      <!-- Navigation Actions -->
+      <nav class="nav-actions">
+        <button id="navWatchlistBtn" class="nav-btn">
+          <i class="fa-solid fa-bookmark"></i>
+          <span>Watchlist</span>
+          <span id="watchlistBadge" class="badge">0</span>
+        </button>
+        <button id="navStatsBtn" class="nav-btn glow-btn">
+          <i class="fa-solid fa-brain"></i>
+          <span>Model Analytics</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Application Wrapper -->
+  <main class="app-container">
+
+    <!-- Hero Spotlight Section -->
+    <section class="hero-spotlight" id="heroSpotlight">
+      <div class="hero-backdrop" id="heroBackdrop"></div>
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-pill">
+          <i class="fa-solid fa-fire"></i> Featured ML Match
+        </div>
+        <h1 id="heroTitle" class="hero-title">Inception</h1>
+        <div class="hero-meta">
+          <span id="heroYear" class="meta-item"><i class="fa-regular fa-calendar"></i> 2010</span>
+          <span id="heroRating" class="meta-item rating-star"><i class="fa-solid fa-star"></i> 8.8 IMDb</span>
+          <span id="heroRuntime" class="meta-item"><i class="fa-regular fa-clock"></i> 148 min</span>
+          <span id="heroMood" class="meta-item mood-tag">Mind-Bending</span>
+        </div>
+        <p id="heroOverview" class="hero-overview">
+          A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.
+        </p>
+        <div class="hero-actions">
+          <button id="heroRecommendBtn" class="btn btn-primary btn-lg">
+            <i class="fa-solid fa-diagram-project"></i> Recommend Similar Movies
+          </button>
+          <button id="heroTrailerBtn" class="btn btn-secondary btn-lg">
+            <i class="fa-solid fa-play"></i> Watch Trailer
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Recommendation Studio Bar -->
+    <section class="recommender-studio frosted">
+      <div class="studio-header">
+        <div class="studio-title-group">
+          <h2><i class="fa-solid fa-sliders"></i> AI Recommendation Studio</h2>
+          <p>Select any movie from your library to compute TF-IDF content similarity vectors</p>
+        </div>
+        <div class="studio-status-badge">
+          <span class="status-dot"></span> ML Engine Active
+        </div>
+      </div>
+
+      <div class="studio-controls">
+        <!-- Target Movie Selector -->
+        <div class="control-group">
+          <label for="movieSelect"><i class="fa-solid fa-film"></i> Base Movie</label>
+          <div class="select-wrapper">
+            <select id="movieSelect">
+              <option value="1">Inception (2010)</option>
+              <option value="2">Interstellar (2014)</option>
+              <option value="3">The Dark Knight (2008)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Top N Count Slider -->
+        <div class="control-group">
+          <label for="topNSlider"><i class="fa-solid fa-list-ol"></i> Recommendations (<span id="topNVal">6</span>)</label>
+          <input type="range" id="topNSlider" min="3" max="10" value="6" step="1" />
+        </div>
+
+        <!-- Generate Button -->
+        <div class="control-group button-group">
+          <button id="generateRecsBtn" class="btn btn-gradient">
+            <i class="fa-solid fa-bolt"></i> Generate Recommendations
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mood Explorer Pills -->
+    <section class="mood-explorer">
+      <div class="section-header">
+        <h3><i class="fa-solid fa-compass"></i> Explore Cinema by Mood</h3>
+      </div>
+      <div class="mood-pills" id="moodPillsContainer">
+        <button class="mood-pill active" data-mood="all"><i class="fa-solid fa-globe"></i> All Movies</button>
+        <button class="mood-pill" data-mood="Mind-Bending"><i class="fa-solid fa-brain"></i> Mind-Bending</button>
+        <button class="mood-pill" data-mood="Adrenaline Rush"><i class="fa-solid fa-bolt"></i> Adrenaline Rush</button>
+        <button class="mood-pill" data-mood="Dark & Gritty"><i class="fa-solid fa-skull"></i> Dark & Gritty</button>
+        <button class="mood-pill" data-mood="Feel-Good"><i class="fa-solid fa-face-smile"></i> Feel-Good</button>
+        <button class="mood-pill" data-mood="Epic Sci-Fi"><i class="fa-solid fa-rocket"></i> Epic Sci-Fi</button>
+        <button class="mood-pill" data-mood="Heartwarming"><i class="fa-solid fa-heart"></i> Heartwarming</button>
+      </div>
+    </section>
+
+    <!-- Active Section Header & Grid -->
+    <section class="movies-section">
+      <div class="section-title-bar">
+        <h2 id="gridSectionTitle"><i class="fa-solid fa-sparkles"></i> Top ML Matches for <span id="targetMovieName">Inception</span></h2>
+        <span id="resultCountBadge" class="count-badge">6 movies found</span>
+      </div>
+
+      <!-- Movie Card Grid -->
+      <div id="moviesGrid" class="movies-grid">
+        <!-- Dynamic Cards Inserted Here -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Movie Detail & Recommendation Modal -->
+  <div id="movieModal" class="modal-backdrop hidden">
+    <div class="modal-window frosted">
+      <button id="closeModalBtn" class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+
+      <div class="modal-body" id="modalContent">
+        <!-- Dynamic Modal Details -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Analytics Modal -->
+  <div id="statsModal" class="modal-backdrop hidden">
+    <div class="modal-window frosted stats-modal-window">
+      <button id="closeStatsModalBtn" class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div class="stats-header">
+        <h2><i class="fa-solid fa-chart-line"></i> Machine Learning Recommender Analytics</h2>
+        <p>TF-IDF Feature Space & Vector Similarity Architecture</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fa-solid fa-film"></i></div>
+          <div class="stat-number" id="statTotalMovies">20</div>
+          <div class="stat-label">Indexed Movies</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fa-solid fa-font"></i></div>
+          <div class="stat-number" id="statVocabSize">473</div>
+          <div class="stat-label">TF-IDF Vocab Tokens</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fa-solid fa-table-cells"></i></div>
+          <div class="stat-number" id="statMatrixShape">20 x 473</div>
+          <div class="stat-label">Cosine Matrix Dimensions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fa-solid fa-tags"></i></div>
+          <div class="stat-number" id="statGenresCount">10</div>
+          <div class="stat-label">Distinct Genres</div>
+        </div>
+      </div>
+
+      <div class="stats-explanation">
+        <h3><i class="fa-solid fa-code-compare"></i> How standard TF-IDF Cosine Similarity Works</h3>
+        <p>
+          The <code>MovieRecommender</code> engine computes TF-IDF weight vectors across Genres, Plot Summaries, Mood tags, Directors, and Casts. 
+          Cosine similarity measures the angle between document vectors in high-dimensional feature space:
+        </p>
+        <div class="formula-box">
+          $$\text{Similarity}(A, B) = \frac{A \cdot B}{\|A\| \|B\|} = \frac{\sum A_i B_i}{\sqrt{\sum A_i^2} \sqrt{\sum B_i^2}}$$
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <i class="fa-solid fa-clapperboard"></i> CineMind AI Recommendation Engine
+      </div>
+      <p>Developed with Python 3.11 ML Backend & High-Performance Modern CSS/JS Frontend</p>
+    </div>
+  </footer>
+
+  <!-- Application Logic JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>
