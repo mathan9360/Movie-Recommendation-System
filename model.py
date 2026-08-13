@@ -1,12 +1,17 @@
 import os
-import re
-import math
-import json
+import sys
+import pickle
 import numpy as np
 import pandas as pd
 from typing import List, Dict, Any, Tuple
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-# Comprehensive dataset of 50 iconic movies across multiple genres and moods
+# Force standard utf-8 stdout encoding for Windows console compatibility
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
+# Comprehensive Movie Dataset (50 Top Blockbusters)
 MOVIE_DATA = [
     {
         "id": 1,
@@ -330,100 +335,40 @@ MOVIE_DATA = [
     }
 ]
 
-class TFIDFVectorizerCustom:
-    """Lightweight custom TF-IDF Vectorizer with Stopwords Filtering."""
-    
-    STOPWORDS = set([
-        "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", 
-        "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", 
-        "can't", "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", 
-        "down", "during", "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have", 
-        "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", 
-        "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", 
-        "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor", 
-        "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", 
-        "over", "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't", "so", 
-        "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", 
-        "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", 
-        "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", 
-        "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where", "where's", "which", 
-        "while", "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", 
-        "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"
-    ])
-
-    def __init__(self):
-        self.vocabulary_ = {}
-        self.idf_ = {}
-
-    def _tokenize(self, text: str) -> List[str]:
-        text = text.lower()
-        words = re.findall(r'\b[a-z0-9]+\b', text)
-        return [w for w in words if w not in self.STOPWORDS and len(w) > 1]
-
-    def fit_transform(self, raw_documents: List[str]) -> np.ndarray:
-        tokenized_docs = [self._tokenize(doc) for doc in raw_documents]
-        vocab = sorted(list(set(w for doc in tokenized_docs for w in doc)))
-        self.vocabulary_ = {word: i for i, word in enumerate(vocab)}
-
-        N = len(raw_documents)
-        df = {word: 0 for word in vocab}
-        for doc in tokenized_docs:
-            unique_words = set(doc)
-            for w in unique_words:
-                df[w] += 1
-
-        self.idf_ = {word: math.log((1 + N) / (1 + df[word])) + 1.0 for word in vocab}
-
-        matrix = np.zeros((N, len(vocab)), dtype=np.float32)
-        for i, doc in enumerate(tokenized_docs):
-            if not doc:
-                continue
-            tf = {}
-            for w in doc:
-                tf[w] = tf.get(w, 0) + 1
-            doc_len = len(doc)
-            for w, count in tf.items():
-                tf_val = count / doc_len
-                col_idx = self.vocabulary_[w]
-                matrix[i, col_idx] = tf_val * self.idf_[w]
-
-        # L2 normalize rows
-        norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-        norms[norms == 0] = 1.0
-        return matrix / norms
-
-def compute_cosine_similarity(matrix: np.ndarray) -> np.ndarray:
-    """Compute cosine similarity matrix."""
-    dot_product = np.dot(matrix, matrix.T)
-    return dot_product
-
 class MovieRecommender:
-    """Machine Learning Movie Recommendation Engine."""
+    """Standard Machine Learning Recommendation Engine using scikit-learn."""
 
     def __init__(self, data: List[Dict[str, Any]] = None):
         self.raw_data = data if data is not None else MOVIE_DATA
         self.df = pd.DataFrame(self.raw_data)
-        self.vectorizer = TFIDFVectorizerCustom()
+        
+        # Standard scikit-learn TF-IDF Vectorizer
+        self.vectorizer = TfidfVectorizer(stop_words='english')
         self.similarity_matrix = None
-        self.feature_strings = []
+        self.tfidf_matrix = None
+        
+        # Build vector space model & compute cosine similarity matrix
         self._prepare_model()
 
     def _prepare_model(self):
-        """Extract features and generate TF-IDF matrix & similarity scores."""
-        # Create metadata soup feature string for content-based matching
+        """Create feature tags and compute TF-IDF Cosine Similarity Matrix using scikit-learn."""
         soups = []
-        for idx, row in self.df.iterrows():
-            genres_str = " ".join(row["genres"]) * 2  # Boost genre weight
-            mood_str = (row["mood"] + " ") * 2
-            cast_str = " ".join(row["cast"])
-            director_str = row["director"] * 2
+        for _, row in self.df.iterrows():
+            genres = " ".join(row["genres"]) * 2
+            mood = (row["mood"] + " ") * 2
+            cast = " ".join(row["cast"])
+            director = row["director"] * 2
             overview = row["overview"]
-            soup = f"{genres_str} {mood_str} {director_str} {cast_str} {overview}"
+            
+            # Combined feature string
+            soup = f"{genres} {mood} {director} {cast} {overview}"
             soups.append(soup)
 
-        self.feature_strings = soups
+        # 1. Fit & Transform TF-IDF Vectorizer (scikit-learn)
         self.tfidf_matrix = self.vectorizer.fit_transform(soups)
-        self.similarity_matrix = compute_cosine_similarity(self.tfidf_matrix)
+        
+        # 2. Calculate Cosine Similarity Matrix (scikit-learn)
+        self.similarity_matrix = cosine_similarity(self.tfidf_matrix, self.tfidf_matrix)
 
     def get_movies(self) -> List[Dict[str, Any]]:
         """Return all movies in dataset."""
@@ -482,7 +427,7 @@ class MovieRecommender:
         return -1, {}
 
     def get_recommendations(self, target: Any, top_n: int = 5) -> Dict[str, Any]:
-        """Generate top-N recommendations based on TF-IDF Cosine Similarity."""
+        """Generate top-N recommendations based on sklearn Cosine Similarity."""
         target_idx, target_movie = self.get_movie_by_title_or_id(target)
         if target_idx == -1:
             return {
@@ -491,7 +436,9 @@ class MovieRecommender:
                 "recommendations": []
             }
 
+        # Retrieve similarity scores vector for target movie
         sim_scores = self.similarity_matrix[target_idx]
+        
         # Sort indices by similarity descending
         sorted_indices = np.argsort(sim_scores)[::-1]
 
@@ -501,7 +448,7 @@ class MovieRecommender:
                 continue
             movie_item = self.raw_data[idx].copy()
             match_score = float(sim_scores[idx])
-            # Add match score details
+            
             movie_item["similarity_score"] = round(match_score, 4)
             movie_item["match_percentage"] = int(round(match_score * 100))
             
@@ -518,7 +465,7 @@ class MovieRecommender:
             if same_mood:
                 reasons.append(f"Matching mood: {movie_item['mood']}")
 
-            movie_item["match_reasons"] = reasons if reasons else ["High plot and thematic similarity"]
+            movie_item["match_reasons"] = reasons if reasons else ["High thematic plot correlation"]
             recommendations.append(movie_item)
 
             if len(recommendations) >= top_n:
@@ -532,26 +479,24 @@ class MovieRecommender:
         }
 
     def get_model_stats(self) -> Dict[str, Any]:
-        """Return model metadata and matrix stats."""
+        """Return model metadata and scikit-learn matrix stats."""
+        vocab_size = len(self.vectorizer.vocabulary_) if hasattr(self.vectorizer, 'vocabulary_') else 0
         return {
             "total_movies": len(self.raw_data),
-            "vocabulary_size": len(self.vectorizer.vocabulary_),
+            "vocabulary_size": vocab_size,
             "matrix_shape": self.tfidf_matrix.shape,
             "genres_count": len(self.get_genres()),
             "moods": self.get_moods()
         }
 
 if __name__ == "__main__":
-    import sys
-    if hasattr(sys.stdout, 'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
     recommender = MovieRecommender()
-    print("Movie Recommendation System Initialized!")
+    print("🎬 Movie Recommendation System (scikit-learn) Initialized!")
     stats = recommender.get_model_stats()
-    print(f"Dataset Size: {stats['total_movies']} movies | Vocab: {stats['vocabulary_size']} words")
+    print(f"📊 Dataset Size: {stats['total_movies']} movies | Vocab: {stats['vocabulary_size']} words")
     
     test_title = "Inception"
-    print(f"\nTesting Recommendations for '{test_title}':")
+    print(f"\n🔍 Testing Recommendations for '{test_title}':")
     results = recommender.get_recommendations(test_title, top_n=4)
     for rec in results["recommendations"]:
         print(f" -> {rec['title']} ({rec['year']}) | Match: {rec['match_percentage']}% | Reasons: {', '.join(rec['match_reasons'])}")
